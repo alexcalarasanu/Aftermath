@@ -17,6 +17,10 @@ public class MouseController : MonoBehaviour
     void Start()
     {
         dragPreviewGameObjects = new List<GameObject>();
+
+        //Preload the prefabs to decrease lag when drag-selecting
+
+        SimplePool.Preload(highlightPrefab, 500);
     }
 
     // Update is called once per frame
@@ -76,11 +80,12 @@ public class MouseController : MonoBehaviour
             startY = temp;
         }
         //Cleanup past previews
-        for (int i = 0; i < dragPreviewGameObjects.Count; i++)
+        while (dragPreviewGameObjects.Count > 0)
         {
-            Destroy(dragPreviewGameObjects[i]);
+            GameObject go = dragPreviewGameObjects[0];
+            dragPreviewGameObjects.RemoveAt(0);
+            SimplePool.Despawn(go);
         }
-        dragPreviewGameObjects.Clear();
         //Holding
         if (Input.GetMouseButton(0))
         {
@@ -91,7 +96,9 @@ public class MouseController : MonoBehaviour
                     Tile t = WorldController.Instance.World.GetTileAt(x, y);
                     if (t != null)
                     {
-                      dragPreviewGameObjects.Add((GameObject)Instantiate(highlightPrefab, new Vector3(x, y, 0), Quaternion.identity));
+                        GameObject go = SimplePool.Spawn(highlightPrefab, new Vector3(x, y, 0), Quaternion.identity);
+                        go.transform.SetParent(this.transform, true);
+                        dragPreviewGameObjects.Add(go);
                     }
 
                 }
@@ -118,7 +125,9 @@ public class MouseController : MonoBehaviour
             Vector3 difference = lastFPSPosition - currentFPSPosition;
             Camera.main.transform.Translate(difference);
         }
-
+        // camera zoom
+        Camera.main.orthographicSize -= Camera.main.orthographicSize * Input.GetAxis("Mouse ScrollWheel");
+        Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize, 3f, 20f);
     }
 }
 
